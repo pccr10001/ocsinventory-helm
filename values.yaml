@@ -1,0 +1,30 @@
+replicaCount: 1
+
+ocsinventory:
+  namespace: ocsinventory
+  ingressNamespace: 'default'
+  domains: 'ocsi.example.com'
+  dbname: ocsweb
+
+images: 
+  server: 'ocsinventory/ocsinventory-docker-image:2.10'
+  db: 'mysql:8.0'
+  proxy: 'nginx'
+
+resources:
+  server:
+    requests: 
+      cpu: 500m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    storage: 5Gi
+  db:
+    requests: 
+      cpu: 500m
+      memory: 128Mi
+    limits:
+      cpu: 800m
+      memory: 1Gi
+    storage: 20Gi

@@ -1,0 +1,105 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: ocsinventory-server
+  namespace: {{ .Values.ocsinventory.namespace }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  serviceName: ocsinventory-server
+  selector:
+    matchLabels:
+      app: ocsinventory-server
+  template:
+    metadata:
+      labels:
+        app: ocsinventory-server
+      name: ocsinventory-server
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: ocsinventory-server
+        image: {{ .Values.images.server }}
+        imagePullPolicy: Always
+        resources:
+            requests:
+              cpu: {{ .Values.resources.server.requests.cpu }}
+              memory: {{ .Values.resources.server.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.server.limits.cpu }}
+              memory: {{ .Values.resources.server.limits.memory }}
+        volumeMounts:
+          - name: perlcomdata
+            mountPath: /etc/ocsinventory-server
+          - name: ocsreportsdata
+            mountPath: /usr/share/ocsinventory-reports/ocsreports/extensions
+          - name: varlibdata
+            mountPath: /var/lib/ocsinventory-reports
+          - name: httpdconfdata
+            mountPath: /etc/apache2/conf-available
+        env:
+          - name: OCS_DB_SERVER
+            value: ocsinventory-db
+          - name: OCS_DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: ocsinventory-secrets
+                key: dbuser
+                optional: false
+          - name: OCS_DB_PASS
+            valueFrom:
+              secretKeyRef:
+                name: ocsinventory-secrets
+                key: dbpass
+                optional: false
+          - name: OCS_DB_NAME
+            value: {{.Values.ocsinventory.dbname }}
+          - name: OCS_SSL_ENABLED
+            value: '0'
+        ports:
+          - containerPort: 80
+            name: server
+
+  volumeClaimTemplates:
+    - metadata:
+        name: perlcomdata
+        namespace: {{ .Values.ocsinventory.namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ocsinventory-gp2
+        resources:
+          requests:
+            storage: 50Mi
+    - metadata:
+        name: ocsreportsdata
+        namespace: {{ .Values.ocsinventory.namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ocsinventory-gp2
+        resources:
+          requests:
+            storage: 100Mi
+    - metadata:
+        name: varlibdata
+        namespace: {{ .Values.ocsinventory.namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ocsinventory-gp2
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: httpdconfdata
+        namespace: {{ .Values.ocsinventory.namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ocsinventory-gp2
+        resources:
+          requests:
+            storage: 50Mi
+    

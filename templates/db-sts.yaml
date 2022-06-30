@@ -1,0 +1,77 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: StatefulSet
+metadata:
+  name: ocsinventory-db
+  namespace: {{ .Values.ocsinventory.namespace }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  serviceName: ocsinventory-db
+  selector:
+    matchLabels:
+      app: ocsinventory-db
+  template:
+    metadata:
+      labels:
+        app: ocsinventory-db
+      name: ocsinventory-db
+    spec:
+      volumes:
+        - name: sqlconf
+          configMap:
+            name: ocsinventory-db-conf
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: ocsinventory-db
+        image: {{ .Values.images.db }}
+        imagePullPolicy: Always
+        resources:
+            requests:
+              cpu: {{ .Values.resources.db.requests.cpu }}
+              memory: {{ .Values.resources.db.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.db.limits.cpu }}
+              memory: {{ .Values.resources.db.limits.memory }}
+        volumeMounts:
+          - name: sqlconf
+            mountPath: /docker-entrypoint-initdb.d/
+            readOnly: true
+          - name: sqldata
+            mountPath: /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ocsinventory-secrets
+              key: dbrootpass
+              optional: false
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: ocsinventory-secrets
+              key: dbuser
+              optional: false
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ocsinventory-secrets
+              key: dbpass
+              optional: false
+        - name: MYSQL_DATABASE
+          value: {{.Values.ocsinventory.dbname }}
+        ports:
+        - containerPort: 3306
+          name: mysql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: sqldata
+        namespace: {{ .Values.ocsinventory.namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ocsinventory-gp2
+        resources:
+          requests:
+            storage: 10Gi

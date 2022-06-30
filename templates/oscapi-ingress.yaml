@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: ocsinventory-api-ingress
+  namespace: {{ .Values.ocsinventory.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: ocsinventory-secrets
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/server-snippet: |
+      proxy_set_header   X-Real-IP          $remote_addr;
+      proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+      proxy_set_header   Host               $host;
+      proxy_set_header   X-Forwarded-Proto  $scheme;
+spec:
+  rules:
+  - host: {{ .Values.ocsinventory.domains }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ocsinventory-server
+          servicePort: 80
